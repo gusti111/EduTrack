@@ -99,8 +99,8 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      // ignore: deprecated_member_use
-      color: color.withOpacity(0.1),
+      color:
+          color.withOpacity(0.1), // Warna latar belakang kartu dengan opasitas
       elevation: 0,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 16),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/statistic_card.dart';
 import '../../models/task_priority.dart';
 import '../../models/task_status.dart';
 import '../../providers/task_provider.dart';
@@ -28,11 +29,43 @@ class StatisticsScreen extends StatelessWidget {
       );
     }
 
+    final totalTasks = provider.tasks.length;
+    final completedTasks = provider.tasksByStatus(TaskStatus.completed).length;
+    final inProgressTasks =
+        provider.tasksByStatus(TaskStatus.inProgress).length;
+    final completionRate =
+        ((completedTasks / totalTasks) * 100).toStringAsFixed(0);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Statistik')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Ringkasan utama: tingkat penyelesaian tugas.
+          Row(
+            children: [
+              Expanded(
+                child: StatisticCard(
+                  title: 'Selesai',
+                  value: '$completedTasks / $totalTasks',
+                  subtitle: '$completionRate% tingkat penyelesaian',
+                  icon: Icons.check_circle_outline,
+                  color: Colors.green,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: StatisticCard(
+                  title: 'Sedang Dikerjakan',
+                  value: '$inProgressTasks',
+                  subtitle: 'Tugas aktif',
+                  icon: Icons.pending_actions,
+                  color: Colors.orange,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
           Text('Berdasarkan Status',
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
@@ -41,7 +74,7 @@ class StatisticsScreen extends StatelessWidget {
               label: status.label,
               color: status.color,
               count: provider.tasksByStatus(status).length,
-              total: provider.tasks.length,
+              total: totalTasks,
             ),
           const SizedBox(height: 24),
           Text('Berdasarkan Prioritas',
@@ -52,7 +85,7 @@ class StatisticsScreen extends StatelessWidget {
               label: priority.label,
               color: priority.color,
               count: provider.tasks.where((t) => t.priority == priority).length,
-              total: provider.tasks.length,
+              total: totalTasks,
             ),
         ],
       ),
@@ -76,6 +109,7 @@ class _BreakdownRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ratio = total == 0 ? 0.0 : count / total;
+    final percentage = (ratio * 100).toStringAsFixed(0);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -86,7 +120,8 @@ class _BreakdownRow extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(label),
-              Text('$count'),
+              Text('$count ($percentage%)',
+                  style: const TextStyle(color: Colors.grey)),
             ],
           ),
           const SizedBox(height: 4),
@@ -95,7 +130,7 @@ class _BreakdownRow extends StatelessWidget {
             child: LinearProgressIndicator(
               value: ratio,
               minHeight: 8,
-              backgroundColor: color.withValues(alpha: 0.15),
+              backgroundColor: color.withOpacity(0.15),
               valueColor: AlwaysStoppedAnimation(color),
             ),
           ),

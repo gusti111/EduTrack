@@ -7,7 +7,14 @@ import '../../app/constants/firestore_paths.dart';
 /// (dan implementasinya di Repository) yang disentuh.
 class FirestoreService {
   FirestoreService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+      : _firestore = firestore ?? FirebaseFirestore.instance {
+    // Aktifkan persistent cache supaya task tetap bisa dibaca saat offline
+    // (dipakai bersama ConnectivityProvider yang sudah mendeteksi jaringan).
+    _firestore.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
+  }
 
   final FirebaseFirestore _firestore;
 

@@ -26,7 +26,7 @@ android {
 
         applicationId = "com.gusty.edutrack"
 
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
 
         targetSdk = 36
 

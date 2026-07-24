@@ -34,6 +34,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '963404057121',
     projectId: 'edutrack-e9eb2',
     storageBucket: 'edutrack-e9eb2.firebasestorage.app',
+    iosClientId: '963404057121-76rbsso0r3mgg63s655uhjeij8pklh0r.apps.googleusercontent.com',
     iosBundleId: 'com.example.eduTrack',
   );
 

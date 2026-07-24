@@ -11,12 +11,14 @@ import 'package:edutrack/repositories/task_repository.dart';
 
 class MockFirestoreService extends Mock implements FirestoreService {}
 
+// ignore: subtype_of_sealed_class
 class MockDocumentReference extends Mock
     implements DocumentReference<Map<String, dynamic>> {}
 
 class MockQuerySnapshot extends Mock
     implements QuerySnapshot<Map<String, dynamic>> {}
 
+// ignore: subtype_of_sealed_class
 class MockQueryDocumentSnapshot extends Mock
     implements QueryDocumentSnapshot<Map<String, dynamic>> {}
 

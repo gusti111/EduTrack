@@ -16,8 +16,11 @@ Future<void> bootstrap() async {
   };
 
   // Config sensitif (bukan Firebase key — itu aman di firebase_options.dart)
-  // dibaca dari .env yang tidak ikut di-commit.
-  await dotenv.load(fileName: '.env');
+  // dibaca dari assets/env (bukan ".env") supaya aman di Flutter Web:
+  // dev server lokal Flutter menganggap file berawalan titik sebagai hidden
+  // file dan menolaknya dengan 500 saat difetch sebagai asset. File ini
+  // tetap tidak ikut ke-commit (lihat .gitignore).
+  await dotenv.load(fileName: 'assets/env');
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,

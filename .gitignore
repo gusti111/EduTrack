@@ -1,4 +1,4 @@
-.env
+assets/env
 build/
 .dart_tool/
 .packages

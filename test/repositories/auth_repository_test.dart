@@ -13,6 +13,7 @@ class MockUserCredential extends Mock implements UserCredential {}
 
 class MockUser extends Mock implements User {}
 
+// ignore: subtype_of_sealed_class
 class MockDocumentSnapshot extends Mock
     implements DocumentSnapshot<Map<String, dynamic>> {}
 
@@ -57,8 +58,7 @@ void main() {
       );
     });
 
-    test(
-        'register - membuat kredensial auth lalu dokumen profil di Firestore',
+    test('register - membuat kredensial auth lalu dokumen profil di Firestore',
         () async {
       final mockCredential = MockUserCredential();
       final mockUser = MockUser();
@@ -90,8 +90,7 @@ void main() {
       );
 
       expect(
-        () => repository.register(tEmail, tPassword,
-            displayName: tDisplayName),
+        () => repository.register(tEmail, tPassword, displayName: tDisplayName),
         throwsA(isA<Failure>()),
       );
     });

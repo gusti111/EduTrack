@@ -7,16 +7,17 @@ import '../../app/constants/firestore_paths.dart';
 /// (dan implementasinya di Repository) yang disentuh.
 class FirestoreService {
   FirestoreService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance {
-    // Aktifkan persistent cache supaya task tetap bisa dibaca saat offline
-    // (dipakai bersama ConnectivityProvider yang sudah mendeteksi jaringan).
-    _firestore.settings = const Settings(
-      persistenceEnabled: true,
-      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-    );
-  }
+      : _firestore = firestore ?? FirebaseFirestore.instance;
+  // Pengaturan Settings (persistence, long-polling) TIDAK ditaruh di sini.
+  // Lihat lib/bootstrap.dart — harus jadi sentuhan pertama ke Firestore
+  // di seluruh app, sebelum AuthService/FirestoreService manapun dibuat.
 
   final FirebaseFirestore _firestore;
+
+  // Batas waktu wajar untuk operasi tulis. Kalau backend/SDK macet tanpa
+  // melempar exception (kasus nyata yang pernah terjadi di atas), user
+  // tetap dapat pesan error yang jelas alih-alih tombol loading selamanya.
+  static const Duration _writeTimeout = Duration(seconds: 15);
 
   CollectionReference<Map<String, dynamic>> get _tasksRef =>
       _firestore.collection(FirestorePaths.tasks);
@@ -32,14 +33,14 @@ class FirestoreService {
   Future<DocumentReference<Map<String, dynamic>>> addTask(
     Map<String, dynamic> data,
   ) {
-    return _tasksRef.add(data);
+    return _tasksRef.add(data).timeout(_writeTimeout);
   }
 
   Future<void> updateTask(String taskId, Map<String, dynamic> data) {
-    return _tasksRef.doc(taskId).update(data);
+    return _tasksRef.doc(taskId).update(data).timeout(_writeTimeout);
   }
 
   Future<void> deleteTask(String taskId) {
-    return _tasksRef.doc(taskId).delete();
+    return _tasksRef.doc(taskId).delete().timeout(_writeTimeout);
   }
 }

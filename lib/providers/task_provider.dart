@@ -47,7 +47,7 @@ class TaskProvider extends ChangeNotifier {
   }
 
   List<TaskModel> tasksByStatus(TaskStatus status) =>
-      _tasks.where((t) => t.status == status).toList();
+      _tasks.where((t) => t.effectiveStatus == status).toList();
 
   Future<bool> addTask(TaskModel task) => _mutate(() => _repository.addTask(task));
 

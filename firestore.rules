@@ -1,0 +1,30 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Profil user: cuma pemiliknya sendiri yang boleh baca/tulis.
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Task: cuma boleh diakses kalau field 'uid' di dokumen sama dengan
+    // uid yang sedang login. Berlaku juga untuk create (cek data baru)
+    // dan update (cek data yang sudah ada, biar orang lain tidak bisa
+    // reassign task ke uid-nya sendiri).
+    match /tasks/{taskId} {
+      allow read, update, delete: if request.auth != null
+        && request.auth.uid == resource.data.uid;
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.uid;
+    }
+
+    // Notifikasi: sama pola-nya dengan tasks.
+    match /notifications/{notifId} {
+      allow read, update: if request.auth != null
+        && request.auth.uid == resource.data.uid;
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.uid;
+    }
+  }
+}

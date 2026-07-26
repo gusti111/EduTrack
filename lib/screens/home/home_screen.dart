@@ -66,9 +66,7 @@ class _StatsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final total = provider.tasks.length;
     final completed = provider.tasksByStatus(TaskStatus.completed).length;
-    final overdue = provider.tasks
-        .where((t) => t.status != TaskStatus.completed && t.dueDate.isPastNow)
-        .length;
+    final overdue = provider.tasksByStatus(TaskStatus.overdue).length;
 
     return Row(
       children: [
@@ -138,7 +136,7 @@ class _UpcomingTasks extends StatelessWidget {
 
     return Column(
       children: upcoming.take(5).map((task) {
-        final isOverdue = task.dueDate.isPastNow;
+        final isOverdue = task.effectiveStatus == TaskStatus.overdue;
         return Card(
           child: ListTile(
             title: Text(task.title),

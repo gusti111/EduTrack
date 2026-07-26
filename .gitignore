@@ -1,4 +1,13 @@
-assets/env
+assets/env.txt
 build/
 .dart_tool/
 .packages
+
+# IDE
+.idea/
+*.iml
+
+# Config/kredensial sensitif lain (jaga-jaga kalau ditambahkan di masa depan)
+*serviceAccountKey.json
+google-services.json
+GoogleService-Info.plist

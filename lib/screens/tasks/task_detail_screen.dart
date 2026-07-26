@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../../core/extensions/date_time_extension.dart';
 import '../../models/task_model.dart';
+import '../../models/task_priority.dart';
+import '../../models/task_status.dart';
 import '../../providers/task_provider.dart';
 import 'add_edit_task_screen.dart';
 
@@ -75,9 +77,9 @@ class TaskDetailScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Text('Tenggat: ${task.dueDate.toDisplayDate}'),
             const SizedBox(height: 4),
-            Text('Prioritas: ${task.priority.name}'),
+            Text('Prioritas: ${task.priority.label}'),
             const SizedBox(height: 4),
-            Text('Status: ${task.status.name}'),
+            Text('Status: ${task.status.label}'),
             if (task.description != null) ...[
               const SizedBox(height: 16),
               Text(task.description!),

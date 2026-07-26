@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 import 'failure.dart';
 
@@ -16,18 +19,34 @@ class AppException implements Exception {
 /// Helper dipakai di Repository: ubah exception mentah (apapun sumbernya)
 /// menjadi [Failure] yang konsisten untuk dikonsumsi Provider/UI.
 Failure mapExceptionToFailure(Object error) {
-  if (error is FirebaseException) {
-    switch (error.code) {
-      case 'unavailable':
-        return const NetworkFailure();
-      case 'permission-denied':
-        return const AuthFailure('Kamu tidak punya akses untuk aksi ini.');
-      case 'not-found':
-        return const NotFoundFailure();
-      default:
-        return ServerFailure(error.message ?? 'Kesalahan Firestore: ${error.code}');
-    }
+  // TEMPORARY DEBUG LOG — hapus setelah akar masalah timeout ketemu.
+  // Ini nunjukin JENIS ASLI error-nya di Console, sebelum diterjemahkan
+  // jadi pesan generic "gagal koneksi" ke UI. Kalau error ini
+  // TimeoutException, berarti benar operasi Firestore-nya macet lebih
+  // dari 15 detik. Kalau ternyata FirebaseException dengan code lain
+  // (mis. 'unavailable', 'permission-denied'), akar masalahnya beda.
+  debugPrint(
+    '🔴 [mapExceptionToFailure] runtimeType=${error.runtimeType} '
+    'error=$error'
+    '${error is FirebaseException ? ' code=${error.code}' : ''}',
+  );
+
+  // Operasi yang macet lebih dari batas waktu (lihat `_writeTimeout` di
+  // AuthService/FirestoreService) berakhir sebagai TimeoutException, bukan
+  // FirebaseException — wajib dicek duluan supaya tidak jatuh ke pesan
+  // generic "Terjadi kesalahan yang tidak diketahui".
+  if (error is TimeoutException) {
+    return const NetworkFailure(
+      'Permintaan butuh waktu terlalu lama. Periksa koneksi internet kamu lalu coba lagi.',
+    );
   }
+  // PENTING: FirebaseAuthException adalah subclass dari FirebaseException.
+  // Kalau blok `error is FirebaseException` diperiksa duluan, blok
+  // `error is FirebaseAuthException` di bawahnya TIDAK PERNAH tercapai —
+  // semua error login/register (password salah, email sudah terdaftar, dll)
+  // akan selalu jatuh ke pesan generic "Kesalahan Firestore" alih-alih
+  // pesan ramah yang seharusnya. Maka FirebaseAuthException wajib dicek
+  // LEBIH DULU, baru FirebaseException yang lebih umum.
   if (error is FirebaseAuthException) {
     switch (error.code) {
       case 'user-not-found':
@@ -44,6 +63,18 @@ Failure mapExceptionToFailure(Object error) {
         return const NetworkFailure();
       default:
         return AuthFailure(error.message ?? 'Kesalahan autentikasi.');
+    }
+  }
+  if (error is FirebaseException) {
+    switch (error.code) {
+      case 'unavailable':
+        return const NetworkFailure();
+      case 'permission-denied':
+        return const AuthFailure('Kamu tidak punya akses untuk aksi ini.');
+      case 'not-found':
+        return const NotFoundFailure();
+      default:
+        return ServerFailure(error.message ?? 'Kesalahan Firestore: ${error.code}');
     }
   }
   if (error is AppException) {

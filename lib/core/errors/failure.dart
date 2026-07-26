@@ -13,7 +13,8 @@ sealed class Failure {
 }
 
 class NetworkFailure extends Failure {
-  const NetworkFailure() : super('Tidak ada koneksi internet. Periksa jaringan kamu.');
+  const NetworkFailure(
+      [super.message = 'Tidak ada koneksi internet. Periksa jaringan kamu.']);
 }
 
 class ServerFailure extends Failure {

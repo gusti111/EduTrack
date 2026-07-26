@@ -18,8 +18,7 @@ class TaskCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isOverdue =
-        task.status != TaskStatus.completed && task.dueDate.isPastNow;
+    final isOverdue = task.effectiveStatus == TaskStatus.overdue;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),

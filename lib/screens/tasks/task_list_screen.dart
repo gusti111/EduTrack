@@ -24,14 +24,12 @@ class TaskListScreen extends StatefulWidget {
 }
 
 class _TaskListScreenState extends State<TaskListScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // Provider hanya mulai listen sekali saat layar dibuka.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TaskProvider>().listenToTasks(widget.uid);
-    });
-  }
+  // Catatan: TaskListScreen TIDAK memanggil listenToTasks() di initState.
+  // HomeShell sudah melakukannya sekali untuk seluruh tab (lihat
+  // home_shell.dart) karena semua tab dibangun bersamaan di dalam
+  // IndexedStack. Memanggilnya lagi di sini dulu menyebabkan subscription
+  // Firestore dibatalkan & dibuat ulang dua kali setiap kali HomeShell
+  // mount, memicu flicker loading yang tidak perlu.
 
   @override
   Widget build(BuildContext context) {

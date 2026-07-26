@@ -24,6 +24,21 @@ class TaskModel {
     required this.createdAt,
   });
 
+  /// Status "nyata" yang seharusnya dipakai untuk ditampilkan di UI/statistik.
+  ///
+  /// [status] yang tersimpan di Firestore hanya pernah diisi manual sebagai
+  /// pending/inProgress/completed — tidak ada tempat di aplikasi yang pernah
+  /// menyimpan [TaskStatus.overdue] secara eksplisit. Getter ini menghitung
+  /// overdue secara dinamis berdasarkan [dueDate], supaya semua layar
+  /// (HomeScreen, TaskCard, StatisticsScreen) menampilkan angka "Terlambat"
+  /// yang sama dan benar, tanpa perlu job/cron terpisah untuk mengubah
+  /// status tersimpan.
+  TaskStatus get effectiveStatus {
+    if (status == TaskStatus.completed) return TaskStatus.completed;
+    if (dueDate.isBefore(DateTime.now())) return TaskStatus.overdue;
+    return status;
+  }
+
   factory TaskModel.fromMap(Map<String, dynamic> map, String id) {
     return TaskModel(
       id: id,

@@ -1,161 +1,90 @@
-# EduTrack — Scaffold Arsitektur + Slice Task CRUD
+# EduTrack — Smart Student Planner
 
-Ini hasil scaffolding sesuai `EduTrack_Arsitektur_Revisi.md`, plus satu fitur
-lengkap end-to-end (**Task CRUD**) sebagai contoh nyata gimana semua lapisan
-dipakai bareng.
+Implementasi Flutter untuk EduTrack sesuai `EduTrack_Arsitektur_Revisi.md`,
+dengan arsitektur **UI → Provider → Repository → Service → Firebase**.
 
-## Yang sudah jadi
+## Status Fitur
+
+Semua 15 halaman di peta desain Figma sudah punya implementasi:
+
+| Halaman | Status |
+|---|---|
+| Splash (AuthGate) | ✅ |
+| Login / Register / Forgot Password | ✅ Firebase Auth |
+| Home Dashboard | ✅ ringkasan total/selesai/terlambat + tugas mendatang |
+| Task List / Detail / Add-Edit | ✅ CRUD penuh, realtime via Firestore stream |
+| Calendar | ✅ grid bulanan interaktif (`table_calendar`), tap tanggal untuk lihat tugas |
+| Statistics | ✅ breakdown status & prioritas (progress bar) |
+| Notification Center | ✅ in-app (Firestore) + push notification (FCM) |
+| Profile / Edit Profile | ✅ |
+| Settings | ✅ dark mode (persist via `SharedPreferences`); toggle notifikasi masih state lokal |
+| About | ✅ |
+
+## Arsitektur
+
+```
+UI (Screens)
+   → Provider           # state: loading / data / Failure — tidak tahu Firestore
+      → Repository      # translate Model ↔ Map, exception ↔ Failure
+         → Service       # panggilan mentah ke Firebase
+            → Firebase / Firestore
+```
+
+Struktur folder:
 
 ```
 lib/
-├── main.dart                          # entry point tipis
-├── bootstrap.dart                     # init Firebase, dotenv, error handling
-├── firebase_options.dart              # PLACEHOLDER — lihat catatan di bawah
-│
-├── app/
-│   ├── app.dart                       # MultiProvider + MaterialApp
-│   ├── theme/app_theme.dart
-│   └── constants/firestore_paths.dart
-│
+├── main.dart / bootstrap.dart / firebase_options.dart
+├── app/                  # theme, routes, konstanta (nama koleksi Firestore, dsb)
 ├── core/
-│   ├── errors/
-│   │   ├── failure.dart               # Failure sealed class
-│   │   └── app_exception.dart         # mapExceptionToFailure()
-│   ├── services/
-│   │   ├── auth_service.dart
-│   │   └── firestore_service.dart
-│   ├── extensions/date_time_extension.dart
-│   └── widgets/
-│       ├── loading_widget.dart
-│       ├── empty_state.dart
-│       ├── error_state.dart
-│       └── task_card.dart
-│
-├── models/
-│   ├── user_model.dart
-│   ├── task_priority.dart             # enum, bukan String bebas
-│   ├── task_status.dart
-│   └── task_model.dart                # fromMap / toMap / copyWith
-│
-├── repositories/
-│   ├── auth_repository.dart           # interface + AuthRepositoryImpl
-│   └── task_repository.dart           # interface + TaskRepositoryImpl
-│
-├── providers/
-│   ├── auth_provider.dart             # state: status (unknown/auth/unauth)
-│   └── task_provider.dart             # state: isLoading / tasks / failure
-│
-└── screens/
-    ├── splash/splash_screen.dart      # AuthGate: routing berdasar status
-    ├── auth/
-    │   ├── login_screen.dart
-    │   ├── register_screen.dart
-    │   └── forgot_password_screen.dart
-    ├── home/
-    │   ├── home_shell.dart            # bottom nav: Home/Tasks/Calendar/Statistics/Profile
-    │   └── home_screen.dart           # dashboard: stat cards + upcoming tasks
-    ├── tasks/
-    │   ├── task_list_screen.dart
-    │   ├── add_edit_task_screen.dart
-    │   └── task_detail_screen.dart
-    ├── calendar/calendar_screen.dart  # tasks dikelompokkan per tanggal (versi dasar)
-    ├── statistics/statistics_screen.dart  # breakdown status/prioritas, progress bar manual
-    ├── notification/notification_screen.dart
-    ├── settings/settings_screen.dart
-    ├── about/about_screen.dart
-    └── profile/
-        ├── profile_screen.dart
-        └── edit_profile_screen.dart
+│   ├── errors/           # Failure (sealed class) + mapper exception → Failure
+│   ├── services/         # AuthService, FirestoreService, NotificationService,
+│   │                      # PushNotificationService (FCM), StorageService
+│   ├── extensions/, utils/, widgets/
+├── models/               # UserModel, TaskModel (+ enum TaskPriority/TaskStatus), NotificationModel
+├── repositories/         # AuthRepository, TaskRepository, NotificationRepository
+├── providers/            # AuthProvider, TaskProvider, NotificationProvider,
+│                          # ThemeProvider, ConnectivityProvider
+└── screens/              # 15 halaman, dikelompokkan per fitur
 ```
 
-## Alur Auth
+## Menjalankan Proyek
 
-`SplashScreen` bertindak sebagai **AuthGate** — satu-satunya tempat yang
-"tahu" soal `AuthStatus`:
+1. `flutter pub get`
+2. Salin `assets/env.example` → `assets/env.txt` (config sensitif non-Firebase;
+   `firebase_options.dart` sendiri aman untuk di-commit, isinya bukan rahasia).
+3. Aktifkan **Email/Password sign-in** di Firebase Console → Authentication →
+   Sign-in method — tanpa ini, login/register gagal dengan error dari Firebase.
+4. `flutter run`
 
-```
-AuthStatus.unknown          -> CircularProgressIndicator
-AuthStatus.unauthenticated  -> LoginScreen (-> RegisterScreen / ForgotPasswordScreen)
-AuthStatus.authenticated    -> HomeShell(uid: auth.uid!)
-```
+> Catatan verifikasi: perbaikan di source ini dikerjakan lewat code review
+> manual (tidak ada akses Flutter/Dart SDK atau `pub.dev` di environment
+> yang dipakai untuk mengedit). Jalankan `flutter analyze` dan `flutter test`
+> di mesin lokal sebagai langkah verifikasi akhir sebelum build/release.
 
-`uid: 'demo-uid'` yang sebelumnya hardcode di `app.dart` sudah dihapus —
-sekarang datang dari `AuthProvider.uid` yang asli, hasil listen ke
-`FirebaseAuth.authStateChanges()`. Register otomatis bikin dokumen profil
-di koleksi `users` (terpisah dari data auth Firebase sendiri), sesuai
-`FirestorePaths.users`.
-
-Validasi form auth mengikuti pola dari Jobsheet 6: email pakai `RegExp`,
-password wajib kombinasi huruf besar/kecil + angka, `obscureText` untuk
-field password, dan `_formKey.currentState!.validate()` sebelum submit.
-
-## HomeShell (Bottom Navigation)
-
-`HomeShell` memanggil `listenToTasks(uid)` sekali di level shell, lalu
-semua tab (Home, Tasks, Calendar, Statistics) baca data yang sama dari
-`TaskProvider` — tidak ada subscribe berulang tiap pindah tab (`IndexedStack`
-menjaga semua tab tetap hidup di memori).
-
-- **Home** — kartu ringkasan (total/selesai/terlambat) + 5 tugas terdekat.
-- **Calendar** — versi dasar: task dikelompokkan per tanggal tenggat sebagai
-  daftar section. Bukan grid kalender interaktif — kalau butuh itu, tinggal
-  pasang package `table_calendar` sebagai lapisan tampilan; data dari
-  `TaskProvider` tidak perlu diubah.
-- **Statistics** — breakdown per status & prioritas pakai
-  `LinearProgressIndicator` manual (tanpa dependency chart tambahan).
-- **Profile** — baca dokumen `users/{uid}` lewat `AuthRepository.getUserProfile()`,
-  tombol Edit Profil (ubah `displayName`) dan Keluar.
-
-Alurnya persis seperti diagram di dokumen arsitektur:
-
-```
-TaskListScreen (UI)
-   → context.watch<TaskProvider>()          # loading / data / failure
-      → TaskRepository (interface)          # translate Map ↔ TaskModel
-         → FirestoreService                 # panggilan mentah Firestore
-```
-
-UI (`task_list_screen.dart`) tidak pernah tahu soal `Firestore` atau
-`FirebaseException` — hanya tahu tiga kondisi: loading, ada data, atau ada
-`Failure`.
-
-## Yang masih perlu kamu lakukan
-
-1. **Buat project Flutter asli**, lalu timpa folder `lib/` dan `pubspec.yaml`
-   dengan yang ada di sini:
-   ```
-   flutter create edutrack
-   ```
-2. **Generate `firebase_options.dart` yang asli**:
-   ```
-   dart pub global activate flutterfire_cli
-   flutterfire configure
-   ```
-   File placeholder di sini sengaja melempar error kalau belum diganti, biar
-   ketahuan kalau lupa.
-3. `flutter pub get`
-4. Aktifkan **Email/Password sign-in** di Firebase Console (Authentication →
-   Sign-in method) — tanpa ini, login/register akan gagal dengan error dari
-   Firebase.
-5. Semua 15 layar di peta Figma sudah punya file. Yang masih placeholder /
-   perlu ditingkatkan:
-   - **Notifikasi** saat ini IN-APP saja (baca dari koleksi `notifications`
-     di Firestore). Untuk push notification beneran (muncul walau app
-     tertutup), tambahkan `firebase_messaging` + `flutter_local_notifications`
-     — cukup perluas `notification_service.dart`, lapisan di atasnya tidak
-     perlu berubah.
-   - **Settings** (mode gelap, toggle notifikasi) masih state lokal, belum
-     persist. Untuk persist antar sesi, pakai `SharedPreferences`
-     (Jobsheet 12) lewat `SettingsProvider` + `ThemeProvider` terpisah.
-   - **Calendar** masih versi list-dikelompokkan-per-tanggal, belum grid
-     kalender interaktif (lihat catatan di `calendar_screen.dart`).
-
-## Kenapa struktur ini "aman" untuk skala portofolio/UAS
+## Kenapa arsitektur ini "aman" untuk skala portofolio/UAS
 
 - Enum `TaskPriority`/`TaskStatus` bikin compiler menegur kalau ada state yang
   lupa di-handle di UI (mis. lupa kasih warna untuk `overdue`).
+- `TaskModel.effectiveStatus` jadi satu sumber kebenaran untuk deteksi
+  "terlambat" — dipakai konsisten di Home, TaskCard, dan Statistics, supaya
+  angkanya tidak pernah berbeda antar layar.
 - `Failure` terpusat → semua layar bisa pakai `ErrorState` yang sama, tidak
   ada lagi `try/catch` yang isinya cuma `print(e)`.
 - Kalau nanti mau migrasi ke Riverpod atau ganti backend, cukup
-  `TaskProvider`/`TaskRepositoryImpl` yang disentuh — model, UI, dan Service
+  `Provider`/`RepositoryImpl` yang disentuh — model, UI, dan Service
   tidak perlu diubah.
+
+## Pengembangan Selanjutnya
+
+Lihat `EduTrack_Arsitektur_Revisi.md` untuk roadmap v2.0–v4.0 (sinkronisasi
+Google Calendar, lampiran file tugas, gamifikasi, kolaborasi tugas kelompok,
+rekomendasi prioritas berbasis AI).
+
+Item yang belum diimplementasi dan masih terbuka:
+- Toggle "Notifikasi" di Settings masih di state lokal, belum dipersist
+  (pola yang sama seperti `ThemeProvider` bisa dipakai ulang).
+- Belum ada unit test untuk `models/` (test untuk `repositories/` sudah ada
+  di `test/repositories/`).
+
+Lihat `BUGFIX_NOTES.md` untuk riwayat lengkap bug yang ditemukan & diperbaiki.

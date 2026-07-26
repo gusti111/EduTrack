@@ -45,7 +45,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           .read<AuthRepository>()
           .updateDisplayName(widget.uid, _nameController.text.trim());
       if (!mounted) return;
-      Navigator.pop(context);
+      Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

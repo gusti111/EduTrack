@@ -10,7 +10,6 @@ import '../../models/task_priority.dart';
 import '../../models/task_status.dart';
 import '../../models/task_subject.dart';
 import '../../models/user_model.dart';
-import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/task_provider.dart';
 import '../../repositories/auth_repository.dart';
@@ -88,9 +87,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       final profile = snapshot.data;
                       final name = profile?.displayName?.split(' ').first ??
                           'Sahabat Belajar';
-                      final initial = (profile?.displayName?.isNotEmpty ?? false)
-                          ? profile!.displayName![0].toUpperCase()
-                          : '?';
+                      final initial =
+                          (profile?.displayName?.isNotEmpty ?? false)
+                              ? profile!.displayName![0].toUpperCase()
+                              : '?';
                       return _Header(
                         name: name,
                         initial: initial,
@@ -114,11 +114,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       fillColor: AppColors.surfaceOf(context),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: AppColors.dividerOf(context)),
+                        borderSide:
+                            BorderSide(color: AppColors.dividerOf(context)),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: AppColors.dividerOf(context)),
+                        borderSide:
+                            BorderSide(color: AppColors.dividerOf(context)),
                       ),
                     ),
                   ),
@@ -127,9 +129,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Ringkasan',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              )),
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  )),
                     ],
                   ),
                   const SizedBox(height: 10),
@@ -147,7 +150,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             fontWeight: FontWeight.w700,
                           )),
                   const SizedBox(height: 10),
-                  _UpcomingTasks(provider: provider, matchesQuery: _matchesQuery),
+                  _UpcomingTasks(
+                      provider: provider, matchesQuery: _matchesQuery),
                   const SizedBox(height: 24),
                   _WeeklyProgress(provider: provider),
                 ],
@@ -245,17 +249,37 @@ class _SummaryRow extends StatelessWidget {
       crossAxisSpacing: 10,
       childAspectRatio: 0.8,
       children: [
-        _SummaryCard(icon: Icons.assignment_outlined, value: total, label: 'Total tugas', color: AppColors.primary),
-        _SummaryCard(icon: Icons.check_circle, value: completed, label: 'Selesai', color: AppColors.success),
-        _SummaryCard(icon: Icons.error, value: overdue, label: 'Tertunda', color: AppColors.danger),
-        _SummaryCard(icon: Icons.today, value: dueToday, label: 'Deadline hari ini', color: AppColors.warning),
+        _SummaryCard(
+            icon: Icons.assignment_outlined,
+            value: total,
+            label: 'Total tugas',
+            color: AppColors.primary),
+        _SummaryCard(
+            icon: Icons.check_circle,
+            value: completed,
+            label: 'Selesai',
+            color: AppColors.success),
+        _SummaryCard(
+            icon: Icons.error,
+            value: overdue,
+            label: 'Tertunda',
+            color: AppColors.danger),
+        _SummaryCard(
+            icon: Icons.today,
+            value: dueToday,
+            label: 'Deadline hari ini',
+            color: AppColors.warning),
       ],
     );
   }
 }
 
 class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.icon, required this.value, required this.label, required this.color});
+  const _SummaryCard(
+      {required this.icon,
+      required this.value,
+      required this.label,
+      required this.color});
 
   final IconData icon;
   final int value;
@@ -279,13 +303,16 @@ class _SummaryCard extends StatelessWidget {
             child: Icon(icon, size: 14, color: Colors.white),
           ),
           const SizedBox(height: 6),
-          Text('$value', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+          Text('$value',
+              style: TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.bold, color: color)),
           const SizedBox(height: 2),
           Text(
             label,
             textAlign: TextAlign.center,
             maxLines: 2,
-            style: TextStyle(fontSize: 9.5, color: AppColors.textSecondaryOf(context)),
+            style: TextStyle(
+                fontSize: 9.5, color: AppColors.textSecondaryOf(context)),
           ),
         ],
       ),
@@ -352,12 +379,16 @@ class _TodayTasks extends StatelessWidget {
             trailing: IconButton(
               icon: Icon(
                 isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
-                color: isCompleted ? AppColors.success : AppColors.textSecondaryOf(context),
+                color: isCompleted
+                    ? AppColors.success
+                    : AppColors.textSecondaryOf(context),
               ),
               onPressed: () {
                 final newStatus =
                     isCompleted ? TaskStatus.pending : TaskStatus.completed;
-                context.read<TaskProvider>().updateTask(task.copyWith(status: newStatus));
+                context
+                    .read<TaskProvider>()
+                    .updateTask(task.copyWith(status: newStatus));
               },
             ),
           ),
@@ -380,7 +411,8 @@ class _UpcomingTasks extends StatelessWidget {
     final upcoming = provider.tasks
         .where((t) =>
             t.effectiveStatus != TaskStatus.completed &&
-            t.dueDate.isAfter(today.add(const Duration(hours: 23, minutes: 59))) &&
+            t.dueDate
+                .isAfter(today.add(const Duration(hours: 23, minutes: 59))) &&
             matchesQuery(t))
         .toList()
       ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
@@ -400,7 +432,7 @@ class _UpcomingTasks extends StatelessWidget {
         separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
           final task = upcoming[index];
-          final visual = TaskSubjectVisual.of(task.subject);
+          TaskSubjectVisual.of(task.subject);
           return GestureDetector(
             onTap: () => Navigator.push(
               context,
@@ -443,25 +475,32 @@ class _UpcomingTasks extends StatelessWidget {
                     task.subject.isNotEmpty ? task.subject : 'Umum',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                        fontSize: 11, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     task.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12.5, color: AppColors.textSecondaryOf(context)),
+                    style: TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.textSecondaryOf(context)),
                   ),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: task.priority.color.withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       task.priority.label,
-                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: task.priority.color),
+                      style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                          color: task.priority.color),
                     ),
                   ),
                 ],
@@ -475,8 +514,18 @@ class _UpcomingTasks extends StatelessWidget {
 
   String _monthAbbr(int month) {
     const names = [
-      'JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN',
-      'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES',
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MEI',
+      'JUN',
+      'JUL',
+      'AGU',
+      'SEP',
+      'OKT',
+      'NOV',
+      'DES',
     ];
     return names[month - 1];
   }
@@ -495,7 +544,8 @@ class _WeeklyProgress extends StatelessWidget {
     final endOfWeek = startOfWeek.add(const Duration(days: 7));
 
     final weekTasks = provider.tasks
-        .where((t) => t.dueDate.isAfter(startOfWeek) && t.dueDate.isBefore(endOfWeek))
+        .where((t) =>
+            t.dueDate.isAfter(startOfWeek) && t.dueDate.isBefore(endOfWeek))
         .toList();
     final weekCompleted =
         weekTasks.where((t) => t.status == TaskStatus.completed).length;
@@ -514,10 +564,12 @@ class _WeeklyProgress extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Progress Mingguan', style: TextStyle(fontWeight: FontWeight.w700)),
+              const Text('Progress Mingguan',
+                  style: TextStyle(fontWeight: FontWeight.w700)),
               Text(
                 '${(percent * 100).round()}%',
-                style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary),
+                style: const TextStyle(
+                    fontWeight: FontWeight.w800, color: AppColors.primary),
               ),
             ],
           ),
@@ -536,7 +588,8 @@ class _WeeklyProgress extends StatelessWidget {
             weekTasks.isEmpty
                 ? 'Belum ada tugas dengan tenggat minggu ini.'
                 : 'Kamu telah menyelesaikan $weekCompleted dari ${weekTasks.length} tugas minggu ini',
-            style: TextStyle(color: AppColors.textSecondaryOf(context), fontSize: 12.5),
+            style: TextStyle(
+                color: AppColors.textSecondaryOf(context), fontSize: 12.5),
           ),
         ],
       ),

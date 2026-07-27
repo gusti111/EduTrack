@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../app/theme/app_colors.dart';
+
 enum TaskPriority { low, medium, high }
 
 extension TaskPriorityX on TaskPriority {
@@ -10,8 +12,8 @@ extension TaskPriorityX on TaskPriority {
       };
 
   Color get color => switch (this) {
-        TaskPriority.low => Colors.green,
-        TaskPriority.medium => Colors.orange,
-        TaskPriority.high => Colors.red,
+        TaskPriority.low => AppColors.success,
+        TaskPriority.medium => AppColors.warning,
+        TaskPriority.high => AppColors.danger,
       };
 }

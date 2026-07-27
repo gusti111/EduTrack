@@ -40,7 +40,7 @@ class _HomeShellState extends State<HomeShell> {
     final pages = [
       HomeScreen(uid: widget.uid),
       TaskListScreen(uid: widget.uid),
-      const CalendarScreen(),
+      CalendarScreen(uid: widget.uid),
       const StatisticsScreen(),
       const ProfileScreen(),
     ];

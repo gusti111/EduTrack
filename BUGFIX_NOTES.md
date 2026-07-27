@@ -1,6 +1,68 @@
 # Catatan Perbaikan Bug — EduTrack
 
-## 🆕 RONDE TERBARU (review menyeluruh terhadap seluruh isi `EduTrack.zip`)
+## 🆕 RONDE AUDIT ARSITEKTUR (stale data, corrupt data, offline-first)
+
+### 14. Status "Terlambat" tidak reaktif terhadap waktu (`lib/providers/task_provider.dart`)
+**Akar masalah:** `TaskModel.effectiveStatus` menghitung overdue secara
+sinkron dari `DateTime.now()`. Firestore hanya mengirim snapshot baru kalau
+ada perubahan DATA di server — bukan karena waktu berjalan melewati
+`dueDate`. User yang membiarkan app terbuka (idle) melihat status/statistik
+basi sampai ada trigger lain yang kebetulan memicu rebuild.
+**Perbaikan:** `TaskProvider.listenToTasks()` sekarang juga menyalakan
+`Timer.periodic(Duration(minutes: 1))` yang memanggil `notifyListeners()`
+tanpa mengubah `_tasks`/`_isLoading`/`_failure` — cukup memaksa UI membaca
+ulang `effectiveStatus` pada waktu saat itu. Timer dibatalkan di `dispose()`.
+
+### 15. Satu dokumen cacat merusak seluruh stream tugas (`lib/repositories/task_repository.dart`, `lib/models/task_model.dart`)
+**Akar masalah:** `watchTasks` mengonversi seluruh `snapshot.docs` lewat
+satu `.map()`. Kalau satu dokumen punya field yang tidak valid (mis.
+`dueDate` kosong/rusak akibat intervensi manual di Firebase Console),
+`TaskModel.fromMap` melempar exception yang merusak seluruh stream —
+layar user gagal total walau 99 dokumen lain valid.
+**Perbaikan:** iterasi diubah jadi loop `for` dengan try-catch per
+dokumen; dokumen yang gagal di-parse dicatat lewat `debugPrint` lalu
+dilewati, sisanya tetap tampil. Sebagai bagian dari perbaikan ini,
+`TaskModel.fromMap` juga tidak lagi diam-diam mengganti `dueDate` yang
+kosong/tidak valid menjadi `DateTime.now()` (yang membuat tugas baru
+tampak "mendesak" tanpa alasan yang terlihat) — sekarang melempar
+`FormatException` supaya dokumen tersebut ditangkap dan dilewati oleh
+perbaikan di atas, bukan diam-diam memakai data yang salah.
+
+### 16. Timeout tulis diperlakukan sebagai kegagalan mutlak, padahal Firestore offline-first (`lib/core/errors/*.dart`, `lib/repositories/*.dart`, `lib/providers/task_provider.dart`)
+**Akar masalah:** `mapExceptionToFailure` memetakan setiap
+`TimeoutException` (baca maupun tulis) ke `NetworkFailure` dengan pesan
+"Permintaan butuh waktu terlalu lama...". Untuk operasi TULIS
+(add/update/delete task, buat/update dokumen profil), ini menyesatkan:
+SDK Firestore offline-first sudah menulis data ke local cache duluan,
+jadi timeout di sana tidak berarti data hilang — hanya belum tersinkron
+ke server.
+**Perbaikan:** `mapExceptionToFailure(error, {isWrite})` sekarang
+menerima parameter `isWrite`; kalau `true` dan errornya
+`TimeoutException`, dipetakan ke tipe baru `PendingSyncFailure` (pesan:
+"Disimpan lokal, menunggu koneksi jaringan.") alih-alih `NetworkFailure`.
+Semua pemanggilan tulis di `TaskRepositoryImpl` dan `AuthRepositoryImpl`
+diberi `isWrite: true`. `TaskProvider._mutate` dan `EditProfileScreen`
+memperlakukan `PendingSyncFailure` sebagai sukses-dengan-peringatan
+(form tetap ditutup, tapi menampilkan snackbar info) alih-alih error
+yang memblokir.
+
+### 17. Kegagalan pembuatan dokumen profil membatalkan seluruh proses register (`lib/repositories/auth_repository.dart`)
+**Akar masalah:** `register()` membungkus pembuatan akun Auth DAN
+pembuatan dokumen profil Firestore dalam satu try-catch. Kalau
+`createUserDoc` gagal (mis. timeout), exception dilempar ke UI sebagai
+kegagalan register — padahal akun Firebase Auth-nya sendiri sudah
+berhasil dibuat, membuat user bingung ("register gagal" tapi kalau
+dicoba lagi malah "email sudah terdaftar").
+**Perbaikan:** try-catch dipisah dua: kegagalan `register()` (akun Auth)
+tetap melempar `Failure` ke UI; kegagalan `createUserDoc` (dokumen
+profil) hanya dicatat lewat `debugPrint` dan tidak membatalkan alur —
+user tetap bisa login, `ProfileScreen` sudah punya fallback nama default
+untuk kasus ini. Ditambahkan juga `credential.user?.getIdToken(true)`
+sebelum menulis dokumen profil untuk memaksa refresh token auth,
+menghindari race condition di mana Security Rules yang bergantung pada
+`request.auth.uid` sempat menolak penulisan karena token lama/belum ada.
+
+---
 
 ### 7. Android memakai config Firebase milik iOS (`lib/firebase_options.dart`)
 **Sebelum:**

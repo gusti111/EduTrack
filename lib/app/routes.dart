@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../screens/about/about_screen.dart';
+import '../screens/settings/language_screen.dart';
+import '../screens/settings/notification_settings_screen.dart';
+import '../screens/settings/privacy_screen.dart';
+import '../screens/settings/security_screen.dart';
 import '../screens/settings/settings_screen.dart';
+import '../screens/settings/theme_color_screen.dart';
+import '../screens/settings/timezone_screen.dart';
 
 /// Nama route dipusatkan di sini biar tidak ada magic string tersebar.
 ///
@@ -20,9 +26,21 @@ class AppRoutes {
 
   static const String settings = '/settings';
   static const String about = '/about';
+  static const String notificationSettings = '/settings/notifications';
+  static const String security = '/settings/security';
+  static const String privacy = '/settings/privacy';
+  static const String themeColor = '/settings/theme-color';
+  static const String language = '/settings/language';
+  static const String timezone = '/settings/timezone';
 
   static Map<String, WidgetBuilder> get routes => {
         settings: (_) => const SettingsScreen(),
         about: (_) => const AboutScreen(),
+        notificationSettings: (_) => const NotificationSettingsScreen(),
+        security: (_) => const SecurityScreen(),
+        privacy: (_) => const PrivacyScreen(),
+        themeColor: (_) => const ThemeColorScreen(),
+        language: (_) => const LanguageScreen(),
+        timezone: (_) => const TimezoneScreen(),
       };
 }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../app/theme/app_colors.dart';
 import '../../core/utils/validator.dart';
+import '../../core/widgets/auth_background.dart';
 import '../../core/widgets/custom_textfield.dart';
 import '../../providers/auth_provider.dart';
 import 'forgot_password_screen.dart';
@@ -46,34 +48,40 @@ class _LoginScreenState extends State<LoginScreen> {
     final isSubmitting = context.watch<AuthProvider>().isSubmitting;
 
     return Scaffold(
-      body: SafeArea(
+      body: AuthBackground(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(Icons.school, size: 64, color: Theme.of(context).colorScheme.primary),
-                  const SizedBox(height: 12),
+                  const AuthLogoHeader(),
+                  const SizedBox(height: 32),
                   Text(
-                    'EduTrack',
+                    'Selamat Datang',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Smart Student Planner',
+                    'Masuk untuk melanjutkan ke akun anda',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: AppColors.textSecondaryOf(context)),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 28),
                   CustomTextField(
                     controller: _emailController,
                     label: 'Email',
                     icon: Icons.email_outlined,
                     keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
                     validator: Validators.email,
                   ),
                   const SizedBox(height: 16),
@@ -82,6 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     label: 'Kata Sandi',
                     icon: Icons.lock_outline,
                     obscureText: true,
+                    textInputAction: TextInputAction.done,
                     validator: Validators.loginPassword,
                   ),
                   Align(
@@ -94,18 +103,28 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Text('Lupa kata sandi?'),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
                   FilledButton(
                     onPressed: isSubmitting ? null : _submit,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
                     child: isSubmitting
                         ? const SizedBox(
                             height: 20,
                             width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
                         : const Text('Masuk'),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
+                  const OrDivider(),
+                  const SizedBox(height: 20),
+                  const GoogleSignInButton(),
+                  const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

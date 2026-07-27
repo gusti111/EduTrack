@@ -7,6 +7,7 @@ import '../core/services/notification_service.dart';
 import '../providers/auth_provider.dart';
 import '../providers/connectivity_provider.dart';
 import '../providers/notification_provider.dart';
+import '../providers/settings_provider.dart';
 import '../providers/task_provider.dart';
 import '../providers/theme_provider.dart';
 import '../repositories/auth_repository.dart';
@@ -41,6 +42,9 @@ class App extends StatelessWidget {
 
         // --- Providers (state yang dibaca UI) ---
         ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider<SettingsProvider>(
+          create: (_) => SettingsProvider(),
+        ),
         ChangeNotifierProvider<ConnectivityProvider>(
           create: (_) => ConnectivityProvider(),
         ),
@@ -57,12 +61,12 @@ class App extends StatelessWidget {
           update: (_, repository, previous) => previous ?? NotificationProvider(repository),
         ),
       ],
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, _) => MaterialApp(
+      child: Consumer2<ThemeProvider, SettingsProvider>(
+        builder: (context, themeProvider, settingsProvider, _) => MaterialApp(
           title: 'EduTrack',
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.light,
-          darkTheme: AppTheme.dark,
+          theme: AppTheme.light(seedColor: settingsProvider.accentColor.color),
+          darkTheme: AppTheme.dark(seedColor: settingsProvider.accentColor.color),
           themeMode: themeProvider.mode,
           routes: AppRoutes.routes,
           // SplashScreen = AuthGate: mutusin ke Login atau layar utama

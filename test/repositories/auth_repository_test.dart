@@ -1,9 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:edutrack/core/errors/failure.dart';
+import 'package:edutrack/core/network/firestore_rest_client.dart';
 import 'package:edutrack/core/services/auth_service.dart';
 import 'package:edutrack/repositories/auth_repository.dart';
 
@@ -12,10 +12,6 @@ class MockAuthService extends Mock implements AuthService {}
 class MockUserCredential extends Mock implements UserCredential {}
 
 class MockUser extends Mock implements User {}
-
-// ignore: subtype_of_sealed_class
-class MockDocumentSnapshot extends Mock
-    implements DocumentSnapshot<Map<String, dynamic>> {}
 
 void main() {
   late MockAuthService mockAuthService;
@@ -64,6 +60,7 @@ void main() {
       final mockUser = MockUser();
 
       when(() => mockUser.uid).thenReturn(tUid);
+      when(() => mockUser.getIdToken(any())).thenAnswer((_) async => 'token');
       when(() => mockCredential.user).thenReturn(mockUser);
       when(() => mockAuthService.register(tEmail, tPassword))
           .thenAnswer((_) async => mockCredential);
@@ -76,17 +73,33 @@ void main() {
       verify(() => mockAuthService.createUserDoc(tUid, any())).called(1);
     });
 
-    test('register - melempar Failure saat pembuatan dokumen profil gagal',
+    test(
+        'register - TIDAK melempar Failure meski dokumen profil gagal dibuat '
+        '(akun Auth sudah valid, tidak boleh membatalkan login/register)',
         () async {
       final mockCredential = MockUserCredential();
       final mockUser = MockUser();
 
       when(() => mockUser.uid).thenReturn(tUid);
+      when(() => mockUser.getIdToken(any())).thenAnswer((_) async => 'token');
       when(() => mockCredential.user).thenReturn(mockUser);
       when(() => mockAuthService.register(tEmail, tPassword))
           .thenAnswer((_) async => mockCredential);
       when(() => mockAuthService.createUserDoc(tUid, any())).thenThrow(
-        FirebaseException(plugin: 'cloud_firestore', code: 'unavailable'),
+        const FirestoreRestException(statusCode: 503, message: 'unavailable'),
+      );
+
+      await expectLater(
+        repository.register(tEmail, tPassword, displayName: tDisplayName),
+        completes,
+      );
+      verify(() => mockAuthService.register(tEmail, tPassword)).called(1);
+    });
+
+    test('register - melempar Failure saat pembuatan akun Auth itu sendiri gagal',
+        () async {
+      when(() => mockAuthService.register(tEmail, tPassword)).thenThrow(
+        FirebaseAuthException(code: 'email-already-in-use'),
       );
 
       expect(
@@ -97,17 +110,14 @@ void main() {
 
     test('getUserProfile - mengembalikan UserModel jika dokumen ditemukan',
         () async {
-      final mockDoc = MockDocumentSnapshot();
       final tData = {
         'email': tEmail,
         'displayName': tDisplayName,
         'createdAt': '2026-01-01T00:00:00.000',
       };
 
-      when(() => mockDoc.exists).thenReturn(true);
-      when(() => mockDoc.data()).thenReturn(tData);
       when(() => mockAuthService.getUserDoc(tUid))
-          .thenAnswer((_) async => mockDoc);
+          .thenAnswer((_) async => tData);
 
       final result = await repository.getUserProfile(tUid);
 
@@ -119,11 +129,8 @@ void main() {
 
     test('getUserProfile - mengembalikan null jika dokumen tidak ditemukan',
         () async {
-      final mockDoc = MockDocumentSnapshot();
-      when(() => mockDoc.exists).thenReturn(false);
-      when(() => mockDoc.data()).thenReturn(null);
       when(() => mockAuthService.getUserDoc(tUid))
-          .thenAnswer((_) async => mockDoc);
+          .thenAnswer((_) async => null);
 
       final result = await repository.getUserProfile(tUid);
 

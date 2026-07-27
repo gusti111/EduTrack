@@ -1,9 +1,10 @@
 import 'dart:async';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart' show FirebaseException;
 import 'package:flutter/foundation.dart' show debugPrint;
 
+import '../network/firestore_rest_client.dart';
 import 'failure.dart';
 
 /// Exception generik yang dilempar dari lapisan Service, sebelum
@@ -18,7 +19,15 @@ class AppException implements Exception {
 
 /// Helper dipakai di Repository: ubah exception mentah (apapun sumbernya)
 /// menjadi [Failure] yang konsisten untuk dikonsumsi Provider/UI.
-Failure mapExceptionToFailure(Object error) {
+/// [isWrite] membedakan operasi baca vs tulis. SDK Firestore bersifat
+/// offline-first: kalau operasi TULIS (add/update/delete/set) timeout,
+/// itu TIDAK berarti data hilang — data sudah tersimpan di local cache
+/// dan akan tersinkron otomatis begitu koneksi kembali. Operasi tulis
+/// yang timeout karena itu dipetakan ke [PendingSyncFailure] (info/
+/// peringatan), bukan [NetworkFailure] (kegagalan mutlak) — beda dengan
+/// operasi BACA (watch/get) yang timeout, di mana memang belum ada data
+/// apapun yang bisa ditampilkan ke user.
+Failure mapExceptionToFailure(Object error, {bool isWrite = false}) {
   // TEMPORARY DEBUG LOG — hapus setelah akar masalah timeout ketemu.
   // Ini nunjukin JENIS ASLI error-nya di Console, sebelum diterjemahkan
   // jadi pesan generic "gagal koneksi" ke UI. Kalau error ini
@@ -28,7 +37,8 @@ Failure mapExceptionToFailure(Object error) {
   debugPrint(
     '🔴 [mapExceptionToFailure] runtimeType=${error.runtimeType} '
     'error=$error'
-    '${error is FirebaseException ? ' code=${error.code}' : ''}',
+    '${error is FirebaseException ? ' code=${error.code}' : ''}'
+    '${error is FirestoreRestException ? ' statusCode=${error.statusCode}' : ''}',
   );
 
   // Operasi yang macet lebih dari batas waktu (lihat `_writeTimeout` di
@@ -36,6 +46,9 @@ Failure mapExceptionToFailure(Object error) {
   // FirebaseException — wajib dicek duluan supaya tidak jatuh ke pesan
   // generic "Terjadi kesalahan yang tidak diketahui".
   if (error is TimeoutException) {
+    if (isWrite) {
+      return const PendingSyncFailure();
+    }
     return const NetworkFailure(
       'Permintaan butuh waktu terlalu lama. Periksa koneksi internet kamu lalu coba lagi.',
     );
@@ -61,6 +74,15 @@ Failure mapExceptionToFailure(Object error) {
         return const AuthFailure('Format email tidak valid.');
       case 'network-request-failed':
         return const NetworkFailure();
+      case 'account-exists-with-different-credential':
+        return const AuthFailure(
+          'Email ini sudah terdaftar pakai metode login lain (bukan Google). '
+          'Coba login pakai email & kata sandi.',
+        );
+      case 'popup-blocked':
+        return const AuthFailure(
+          'Popup Google diblokir browser. Izinkan popup lalu coba lagi.',
+        );
       default:
         return AuthFailure(error.message ?? 'Kesalahan autentikasi.');
     }
@@ -75,6 +97,22 @@ Failure mapExceptionToFailure(Object error) {
         return const NotFoundFailure();
       default:
         return ServerFailure(error.message ?? 'Kesalahan Firestore: ${error.code}');
+    }
+  }
+  // Error dari FirestoreRestClient (data Firestore lewat REST API,
+  // menggantikan FirebaseException dari cloud_firestore SDK yang sudah
+  // tidak dipakai lagi untuk operasi data — lihat firestore_rest_client.dart).
+  if (error is FirestoreRestException) {
+    switch (error.statusCode) {
+      case 401:
+      case 403:
+        return const AuthFailure('Kamu tidak punya akses untuk aksi ini.');
+      case 404:
+        return const NotFoundFailure();
+      default:
+        return ServerFailure(
+          'Kesalahan Firestore (${error.statusCode}): ${error.message}',
+        );
     }
   }
   if (error is AppException) {

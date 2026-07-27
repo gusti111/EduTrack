@@ -1,8 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:edutrack/core/errors/failure.dart';
+import 'package:edutrack/core/network/firestore_rest_client.dart';
 import 'package:edutrack/core/services/firestore_service.dart';
 import 'package:edutrack/models/task_model.dart';
 import 'package:edutrack/models/task_priority.dart';
@@ -10,17 +12,6 @@ import 'package:edutrack/models/task_status.dart';
 import 'package:edutrack/repositories/task_repository.dart';
 
 class MockFirestoreService extends Mock implements FirestoreService {}
-
-// ignore: subtype_of_sealed_class
-class MockDocumentReference extends Mock
-    implements DocumentReference<Map<String, dynamic>> {}
-
-class MockQuerySnapshot extends Mock
-    implements QuerySnapshot<Map<String, dynamic>> {}
-
-// ignore: subtype_of_sealed_class
-class MockQueryDocumentSnapshot extends Mock
-    implements QueryDocumentSnapshot<Map<String, dynamic>> {}
 
 void main() {
   setUpAll(() {
@@ -42,6 +33,7 @@ void main() {
       id: tTaskId,
       uid: tUid,
       title: 'Desain Antarmuka Mobile',
+      subject: 'Design UI/UX',
       description: 'Implementasi widget kalender interaktif',
       status: TaskStatus.inProgress,
       priority: TaskPriority.high,
@@ -51,9 +43,8 @@ void main() {
 
     test('addTask - meneruskan hasil toMap() ke FirestoreService.addTask',
         () async {
-      final mockDocRef = MockDocumentReference();
       when(() => mockFirestoreService.addTask(any()))
-          .thenAnswer((_) async => mockDocRef);
+          .thenAnswer((_) async => tTaskId);
 
       await repository.addTask(tTask);
 
@@ -62,7 +53,7 @@ void main() {
 
     test('addTask - melempar Failure saat FirestoreService gagal', () async {
       when(() => mockFirestoreService.addTask(any())).thenThrow(
-        FirebaseException(plugin: 'cloud_firestore', code: 'unavailable'),
+        const FirestoreRestException(statusCode: 503, message: 'unavailable'),
       );
 
       expect(() => repository.addTask(tTask), throwsA(isA<Failure>()));
@@ -89,27 +80,21 @@ void main() {
     });
 
     test(
-        'watchTasks - mentransformasi QuerySnapshot Firestore menjadi List<TaskModel>',
-        () async {
-      final mockSnapshot = MockQuerySnapshot();
-      final mockDoc = MockQueryDocumentSnapshot();
-
+        'watchTasks - mentransformasi hasil polling FirestoreService menjadi '
+        'List<TaskModel>', () async {
       final tData = {
         'uid': tUid,
         'title': 'Desain Antarmuka Mobile',
         'description': 'Implementasi widget kalender interaktif',
         'status': 'inProgress',
         'priority': 'high',
-        'dueDate': Timestamp.fromDate(DateTime(2026, 8, 10)),
-        'createdAt': Timestamp.fromDate(DateTime(2026, 7, 20)),
+        'dueDate': DateTime(2026, 8, 10).toIso8601String(),
+        'createdAt': DateTime(2026, 7, 20).toIso8601String(),
       };
 
-      when(() => mockDoc.id).thenReturn(tTaskId);
-      when(() => mockDoc.data()).thenReturn(tData);
-      when(() => mockSnapshot.docs).thenReturn([mockDoc]);
-
-      when(() => mockFirestoreService.watchTasks(tUid))
-          .thenAnswer((_) => Stream.value(mockSnapshot));
+      when(() => mockFirestoreService.watchTasks(tUid)).thenAnswer(
+        (_) => Stream.value([MapEntry(tTaskId, tData)]),
+      );
 
       final stream = repository.watchTasks(tUid);
 
@@ -124,10 +109,63 @@ void main() {
       );
     });
 
+    test(
+        'watchTasks - melewati dokumen cacat, tetap mengembalikan sisa '
+        'dokumen yang valid', () async {
+      final tGoodData = {
+        'uid': tUid,
+        'title': 'Tugas Valid',
+        'status': 'pending',
+        'priority': 'high',
+        'dueDate': DateTime(2026, 8, 10).toIso8601String(),
+        'createdAt': DateTime(2026, 7, 20).toIso8601String(),
+      };
+      // dueDate kosong/rusak — sebelumnya ini diam-diam menjadi
+      // DateTime.now() dan meloloskan dokumen; sekarang harus dilewati.
+      final tCorruptData = {
+        'uid': tUid,
+        'title': 'Tugas Rusak',
+        'status': 'pending',
+        'priority': 'high',
+        'createdAt': DateTime(2026, 7, 20).toIso8601String(),
+      };
+
+      when(() => mockFirestoreService.watchTasks(tUid)).thenAnswer(
+        (_) => Stream.value([
+          MapEntry(tTaskId, tGoodData),
+          MapEntry('task_corrupt', tCorruptData),
+        ]),
+      );
+
+      final stream = repository.watchTasks(tUid);
+
+      await expectLater(
+        stream,
+        emits(
+          isA<List<TaskModel>>()
+              .having((list) => list.length, 'length', 1)
+              .having((list) => list.first.id, 'first.id', tTaskId),
+        ),
+      );
+    });
+
+    test(
+        'addTask - TimeoutException dipetakan ke PendingSyncFailure, bukan '
+        'NetworkFailure (offline-first: data sudah di local cache)',
+        () async {
+      when(() => mockFirestoreService.addTask(any()))
+          .thenThrow(TimeoutException('timeout'));
+
+      await expectLater(
+        repository.addTask(tTask),
+        throwsA(isA<PendingSyncFailure>()),
+      );
+    });
+
     test('watchTasks - meneruskan error Firestore sebagai Failure', () async {
       when(() => mockFirestoreService.watchTasks(tUid)).thenAnswer(
-        (_) => Stream<QuerySnapshot<Map<String, dynamic>>>.error(
-          FirebaseException(plugin: 'cloud_firestore', code: 'unavailable'),
+        (_) => Stream<List<MapEntry<String, Map<String, dynamic>>>>.error(
+          const FirestoreRestException(statusCode: 503, message: 'unavailable'),
         ),
       );
 

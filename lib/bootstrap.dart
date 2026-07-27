@@ -1,8 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 
 import 'app/app.dart';
 import 'firebase_options.dart';
@@ -28,31 +28,26 @@ Future<void> bootstrap() async {
   // (lihat .gitignore).
   await dotenv.load(fileName: 'assets/env.txt');
 
+  // Inisialisasi data locale Bahasa Indonesia untuk package `intl` (nama
+  // hari/bulan). Dilakukan sekali di sini, sebelum runApp, supaya semua
+  // pemakaian DateFormat/TableCalendar dengan locale 'id_ID' di seluruh
+  // app (CalendarScreen, StatisticsScreen, dll) aman dipakai tanpa risiko
+  // MissingLocaleDataException saat runtime.
+  await initializeDateFormatting('id_ID', null);
+  Intl.defaultLocale = 'id_ID';
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // PENTING: ini harus jadi sentuhan PERTAMA ke Firestore di seluruh app,
-  // sebelum widget App (dan seluruh Provider/Service di dalamnya, termasuk
-  // AuthService yang menulis dokumen profil user saat Register) pernah
-  // dibuat. Firestore hanya mau menerima `settings =` satu kali, sebelum
-  // ada operasi apapun terjadi pada instance itu — kalau terlambat,
-  // assignment ini akan diam-diam gagal atau melempar
-  // "Firestore has already been started and its settings can no longer
-  // be changed."
-  //
-  // `webExperimentalAutoDetectLongPolling` khusus untuk Flutter Web:
-  // Firestore Web memakai koneksi streaming jangka panjang (WebChannel)
-  // yang sering diblokir/dipotong oleh jaringan restriktif (proxy kampus,
-  // firewall kantor, dll) — persis gejala "loading lama lalu timeout,
-  // padahal Auth selalu sukses karena Auth cuma HTTP request biasa".
-  // Flag ini membuat SDK otomatis mendeteksi kondisi itu dan pindah ke
-  // mode long-polling, tanpa perlu dipaksa manual.
-  FirebaseFirestore.instance.settings = const Settings(
-    persistenceEnabled: !kIsWeb,
-    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-    webExperimentalAutoDetectLongPolling: kIsWeb ? true : null,
-  );
+  // MIGRASI: blok `FirebaseFirestore.instance.settings = Settings(...)`
+  // yang dulu ada di sini (persistence, webExperimentalForceLongPolling)
+  // sudah TIDAK RELEVAN lagi — app ini tidak lagi memakai package
+  // `cloud_firestore` untuk operasi data sama sekali, sudah digantikan
+  // FirestoreRestClient (HTTP REST biasa, lihat
+  // lib/core/network/firestore_rest_client.dart) yang tidak butuh
+  // pengaturan koneksi streaming apapun. FirebaseAuth di atas tetap
+  // dipakai seperti biasa karena terbukti tidak bermasalah.
 
   runApp(const App());
 }

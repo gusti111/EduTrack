@@ -58,7 +58,11 @@ class TaskDetailScreen extends StatelessWidget {
               context,
               MaterialPageRoute(
                 builder: (_) =>
-                    AddEditTaskScreen(uid: task.uid, existingTask: task),
+                    AddEditTaskScreen(
+                      uid: task.uid,
+                      existingTask: task,
+                      initialDate: task.dueDate,
+                    ),
               ),
             ),
           ),

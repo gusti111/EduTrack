@@ -15,6 +15,15 @@ class TaskProvider extends ChangeNotifier {
   final TaskRepository _repository;
   StreamSubscription<List<TaskModel>>? _subscription;
 
+  // TaskModel.effectiveStatus dihitung dari DateTime.now() secara sinkron,
+  // sehingga tidak pernah berubah dengan sendirinya kalau tidak ada
+  // notifyListeners() baru — dan Firestore tidak akan mengirim snapshot
+  // baru hanya karena waktu berjalan melewati dueDate (tidak ada perubahan
+  // data di server). Tanpa timer ini, user yang membiarkan app terbuka
+  // (idle) akan melihat status/statistik "Terlambat" yang basi sampai ada
+  // aksi lain yang kebetulan memicu rebuild.
+  Timer? _overdueRefreshTimer;
+
   List<TaskModel> _tasks = [];
   bool _isLoading = false;
   Failure? _failure;
@@ -44,6 +53,14 @@ class TaskProvider extends ChangeNotifier {
         notifyListeners();
       },
     );
+
+    _overdueRefreshTimer?.cancel();
+    _overdueRefreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      // Tidak menyentuh _tasks/_isLoading/_failure sama sekali — daftar
+      // task itu sendiri tidak berubah, kita hanya memaksa UI membaca
+      // ulang effectiveStatus (dan Statistik) pada waktu saat ini.
+      notifyListeners();
+    });
   }
 
   List<TaskModel> tasksByStatus(TaskStatus status) =>
@@ -64,15 +81,23 @@ class TaskProvider extends ChangeNotifier {
       await action();
       return true;
     } catch (e) {
-      _failure = e is Failure ? e : const UnknownFailure();
+      final failure = e is Failure ? e : const UnknownFailure();
+      _failure = failure;
       notifyListeners();
-      return false;
+      // PendingSyncFailure berarti operasi tulis timeout, BUKAN gagal:
+      // data sudah tersimpan di local cache Firestore (offline-first) dan
+      // akan tersinkron sendiri saat koneksi kembali. UI (mis. layar
+      // tambah/edit tugas) tetap boleh melanjutkan alur "sukses"-nya
+      // (menutup form, dsb), hanya saja bisa menampilkan pesan di
+      // [failure] sebagai info, bukan error blocking.
+      return failure is PendingSyncFailure;
     }
   }
 
   @override
   void dispose() {
     _subscription?.cancel();
+    _overdueRefreshTimer?.cancel();
     super.dispose();
   }
 }

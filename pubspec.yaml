@@ -13,9 +13,17 @@ dependencies:
 
   # Backend
   firebase_core: ^3.15.2
-  cloud_firestore: ^5.4.4
   firebase_auth: ^5.3.1
   firebase_storage: ^12.3.4
+  # Dipakai auth_service.dart khusus untuk Google Sign-In di Android/iOS
+  # (lewat signInWithCredential). Di Web, Google Sign-In pakai
+  # FirebaseAuth.signInWithPopup langsung — tidak butuh package ini —
+  # jadi tidak perlu konfigurasi client ID tambahan di web/index.html.
+  google_sign_in: ^6.2.2
+  # MIGRASI: cloud_firestore (gRPC/WebChannel) sudah tidak dipakai —
+  # semua operasi data Firestore sekarang lewat REST API biasa (`http`)
+  # via FirestoreRestClient. Lihat lib/core/network/firestore_rest_client.dart.
+  http: ^1.2.2
 
   # State management
   provider: ^6.1.2
@@ -27,6 +35,7 @@ dependencies:
   shared_preferences: ^2.2.3
   table_calendar: ^3.1.2
   firebase_messaging: ^15.2.10
+  cloud_firestore: ^5.6.12
 
 dev_dependencies:
   flutter_test:

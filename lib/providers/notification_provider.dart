@@ -49,6 +49,42 @@ class NotificationProvider extends ChangeNotifier {
     return _repository.markAllAsRead(unreadIds);
   }
 
+  /// Optimistic update: notifikasi langsung hilang dari list saat itu juga
+  /// (mis. dari swipe-to-delete) — polling stream akan mengonfirmasi ulang
+  /// beberapa detik kemudian, tapi user tidak perlu menunggu round-trip
+  /// network untuk melihat hasilnya.
+  Future<void> deleteNotification(String id) async {
+    final previous = _notifications;
+    _notifications = _notifications.where((n) => n.id != id).toList();
+    notifyListeners();
+
+    try {
+      await _repository.deleteNotification(id);
+    } catch (e) {
+      // Gagal hapus di server -> kembalikan tampilan seperti semula.
+      _notifications = previous;
+      _failure = e is Failure ? e : const UnknownFailure();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> clearAll() async {
+    final ids = _notifications.map((n) => n.id).toList();
+    final previous = _notifications;
+    _notifications = [];
+    notifyListeners();
+
+    try {
+      await _repository.deleteAll(ids);
+    } catch (e) {
+      _notifications = previous;
+      _failure = e is Failure ? e : const UnknownFailure();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
   @override
   void dispose() {
     _subscription?.cancel();

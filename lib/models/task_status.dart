@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
 
+import '../app/theme/app_colors.dart';
+
 enum TaskStatus { pending, inProgress, completed, overdue }
 
 extension TaskStatusX on TaskStatus {
   String get label => switch (this) {
-        TaskStatus.pending => 'Pending',
+        TaskStatus.pending => 'Belum Selesai',
         TaskStatus.inProgress => 'Sedang Dikerjakan',
         TaskStatus.completed => 'Selesai',
-        TaskStatus.overdue => 'Terlambat',
+        TaskStatus.overdue => 'Tertunda',
       };
 
   Color get color => switch (this) {
-        TaskStatus.pending => Colors.blueGrey,
-        TaskStatus.inProgress => Colors.blue,
-        TaskStatus.completed => Colors.green,
-        TaskStatus.overdue => Colors.red,
+        TaskStatus.pending => AppColors.primary,
+        TaskStatus.inProgress => AppColors.info,
+        TaskStatus.completed => AppColors.success,
+        TaskStatus.overdue => AppColors.warning,
       };
 }

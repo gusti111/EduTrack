@@ -47,6 +47,26 @@ The source is organized around presentation screens, state providers, repositori
 
 The source uses Provider for application state and separates data operations from screen widgets.
 
+## Application data flow
+
+```mermaid
+flowchart TD
+    A["Launch EduTrack"] --> B["Authentication"]
+    B --> C{"Signed in?"}
+    C -->|No| D["Login or registration"]
+    D --> B
+    C -->|Yes| E["Application shell"]
+    E --> F["Dashboard and task provider"]
+    E --> G["Calendar and task screens"]
+    E --> H["Profile and settings"]
+    F --> I["Task repository"]
+    G --> I
+    I --> J["Firestore REST client"]
+    J --> K["Cloud Firestore"]
+    E --> L["Notification services"]
+    L --> M["In-app notification experience"]
+```
+
 ## Technology
 
 | Area | Technology |
